@@ -1,0 +1,200 @@
+// Prisma Schema — Sales Marketing Flow SaaS
+// Dev: SQLite | Prod: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ─── AUTH & USERS ───────────────────────────────────────
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  passwordHash  String
+  role          String    @default("USER")  // ADMIN | USER
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  leads         Lead[]
+  scrapeJobs    ScrapeJob[]
+  broadcasts    Broadcast[]
+  pipelines     Pipeline[]
+  messages      Message[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── LEADS (CRM CORE) ───────────────────────────────────
+model Lead {
+  id            String       @id @default(cuid())
+  name          String
+  phone         String       @unique
+  email         String?
+  company       String?
+  address       String?
+  city          String?
+  source        String       @default("MANUAL")  // GOOGLE_MAPS|INSTAGRAM|LINKEDIN|MANUAL|CSV_IMPORT
+  sourceUrl     String?
+  sourceRaw     String?
+  tags          String       @default("[]")
+  status        String       @default("NEW")  // NEW|CONTACTED|INTERESTED|NEGOTIATION|WON|LOST
+  pipelineId    String?
+  pipeline      Pipeline?    @relation(fields: [pipelineId], references: [id])
+  assignedToId  String?
+  assignedTo    User?        @relation(fields: [assignedToId], references: [id])
+  notes         String?
+  lastContactAt DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  messages            Message[]
+  activities          Activity[]
+  broadcastAudiences  BroadcastAudience[]
+
+  @@index([status])
+  @@index([source])
+  @@index([pipelineId])
+}
+
+// ─── PIPELINE (KANBAN) ─────────────────────────────────
+model Pipeline {
+  id          String           @id @default(cuid())
+  name        String
+  stages      PipelineStage[]
+  userId      String
+  user        User             @relation(fields: [userId], references: [id])
+  leads       Lead[]
+  createdAt   DateTime         @default(now())
+
+  @@index([userId])
+}
+
+model PipelineStage {
+  id          String    @id @default(cuid())
+  name        String
+  order       Int
+  color       String?
+  pipelineId  String
+  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+}
+
+// ─── MESSAGES (WhatsApp) ───────────────────────────────
+model Message {
+  id           String      @id @default(cuid())
+  leadId       String
+  lead         Lead        @relation(fields: [leadId], references: [id])
+  direction    String      @default("OUTBOUND")  // OUTBOUND|INBOUND
+  status       String      @default("PENDING")   // PENDING|SENT|DELIVERED|READ|FAILED|RECEIVED
+  waMessageId  String?
+  content      String
+  templateId   String?
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  readAt       DateTime?
+  error        String?
+  userId       String?
+  user         User?       @relation(fields: [userId], references: [id])
+  broadcastId  String?
+  broadcast    Broadcast?  @relation(fields: [broadcastId], references: [id])
+  createdAt    DateTime    @default(now())
+
+  @@index([leadId])
+  @@index([broadcastId])
+}
+
+// ─── BROADCAST (WA Blast) ───────────────────────────────
+model Broadcast {
+  id             String              @id @default(cuid())
+  name           String
+  templateId     String?
+  messageBody    String
+  audience       BroadcastAudience[]
+  status         String              @default("DRAFT")  // DRAFT|SCHEDULED|SENDING|COMPLETED|FAILED
+  scheduledAt    DateTime?
+  sentCount      Int                 @default(0)
+  deliveredCount Int                 @default(0)
+  readCount      Int                 @default(0)
+  failedCount    Int                 @default(0)
+  userId         String
+  user           User                @relation(fields: [userId], references: [id])
+  messages       Message[]
+  createdAt      DateTime            @default(now())
+
+  @@index([userId])
+}
+
+model BroadcastAudience {
+  id          String    @id @default(cuid())
+  broadcastId String
+  broadcast   Broadcast @relation(fields: [broadcastId], references: [id])
+  leadId      String
+  lead        Lead      @relation(fields: [leadId], references: [id])
+  status      String    @default("pending")
+}
+
+// ─── SCRAPE JOBS ───────────────────────────────────────
+model ScrapeJob {
+  id          String    @id @default(cuid())
+  source      String    @default("MANUAL")  // GOOGLE_MAPS|INSTAGRAM|LINKEDIN
+  query       String
+  location    String?
+  status      String    @default("PENDING")  // PENDING|RUNNING|COMPLETED|FAILED
+  resultCount Int       @default(0)
+  error       String?
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ─── ACTIVITY LOG ──────────────────────────────────────
+model Activity {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type        String
+  description String
+  metadata    String?
+  createdAt   DateTime @default(now())
+
+  @@index([leadId])
+}
