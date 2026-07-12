@@ -1,36 +1,159 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CS Assistant — Sales Marketing Flow SaaS
 
-## Getting Started
+Otomasi flow sales marketing: scrape leads → CRM → WhatsApp broadcast → pipeline kanban → dashboard laporan.
 
-First, run the development server:
+## Tech Stack
+
+- **Frontend:** Next.js 16, TypeScript, Tailwind CSS v4, shadcn/ui
+- **Backend:** Next.js API Routes, Prisma 5, NextAuth v5
+- **Database:** SQLite (dev) / PostgreSQL (prod via Neon)
+- **Messaging:** WhatsApp Business Cloud API (Meta)
+- **Scraping:** Playwright (Google Maps)
+- **Charts:** Recharts
+- **Kanban:** @hello-pangea/dnd
+
+## Quick Start
 
 ```bash
+# Clone
+git clone https://github.com/gyuxce/csmarketing.git
+cd csmarketing
+
+# Install
+npm install
+
+# Setup env
+cp .env.example .env.local
+# Edit .env.local — minimal isi NEXTAUTH_SECRET
+
+# Setup database
+npx prisma migrate dev --name init
+npx tsx prisma/seed.ts
+
+# Run
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Login: `admin@cs-assistant.com` / `admin123`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Module | Route | Description |
+|--------|-------|-------------|
+| Dashboard | `/` | Charts: lead growth, source pie, sales funnel, performance |
+| CRM | `/crm` | Lead list with search, filter, pagination |
+| CRM Detail | `/crm/:id` | Edit/delete lead, activity timeline, message history |
+| Pipeline | `/pipeline` | Drag-and-drop kanban board |
+| Scraper | `/scraper` | Google Maps scraper + CSV import |
+| Broadcast | `/broadcast` | WhatsApp blast with audience selector |
+| Reports | (via API) | `/api/reports?type=overview|funnel|lead-growth|source-distribution` |
 
-## Learn More
+## Database Setup for Production
 
-To learn more about Next.js, take a look at the following resources:
+### Option A: Neon (recommended — free tier)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Bikin akun di [neon.tech](https://neon.tech)
+2. Create project → dapat connection string
+3. Update `.env.local`:
+```env
+DATABASE_URL="postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/db?sslmode=require"
+```
+4. Update `prisma/schema.prisma`:
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+```
+5. Run:
+```bash
+npx prisma migrate deploy
+npx tsx prisma/seed.ts
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Option B: Vercel Postgres
 
-## Deploy on Vercel
+1. Di Vercel dashboard → Storage → Create Postgres
+2. Copy connection string ke env vars
+3. Sama seperti Opsi A untuk migrate
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## WhatsApp Cloud API Setup
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Bikin [Meta for Developers](https://developers.facebook.com/) account
+2. Create app → type: Business
+3. Add WhatsApp product
+4. Dapatkan Phone Number ID + Access Token
+5. Tambah ke `.env.local`:
+```env
+WA_PHONE_NUMBER_ID=123456789
+WA_ACCESS_TOKEN=EAAxxx...
+WA_VERIFY_TOKEN=my-secret-token
+```
+6. Setup webhook URL: `https://yourdomain.com/api/wa-webhook`
+
+## Deploy to Vercel
+
+```bash
+npm install -g vercel
+vercel
+```
+
+## Environment Variables
+
+```env
+DATABASE_URL=              # PostgreSQL connection string (opsional, default SQLite)
+NEXTAUTH_SECRET=            # Random string for JWT
+NEXTAUTH_URL=http://localhost:3000
+
+# WhatsApp Cloud API (optional)
+WA_PHONE_NUMBER_ID=
+WA_ACCESS_TOKEN=
+WA_VERIFY_TOKEN=
+
+# Google Maps scraper proxy (optional)
+PROXY_URL=
+```
+
+## Project Structure
+
+```
+cs-assistant/
+├── prisma/
+│   ├── schema.prisma
+│   ├── seed.ts
+│   └── migrations/
+├── src/
+│   ├── app/
+│   │   ├── (dashboard)/
+│   │   │   ├── page.tsx              # Dashboard charts
+│   │   │   ├── crm/                  # CRM leads
+│   │   │   ├── pipeline/             # Kanban board
+│   │   │   ├── scraper/              # Scraper UI
+│   │   │   └── broadcast/            # WA broadcast
+│   │   ├── api/
+│   │   │   ├── auth/[...nextauth]/   # NextAuth
+│   │   │   ├── leads/                # Leads CRUD
+│   │   │   ├── pipeline/             # Pipeline + move
+│   │   │   ├── scrape/               # Scraper trigger
+│   │   │   ├── messages/             # WA messages
+│   │   │   ├── broadcast/            # Broadcast
+│   │   │   ├── wa-webhook/           # WA webhook
+│   │   │   └── reports/              # Dashboard data
+│   │   ├── login/
+│   │   └── register/
+│   ├── components/
+│   │   ├── layout/                   # Sidebar, Header
+│   │   ├── crm/                      # Lead form
+│   │   └── ui/                       # shadcn/ui
+│   └── lib/
+│       ├── prisma.ts
+│       ├── auth.ts
+│       ├── wa-client.ts
+│       └── scrapers/
+├── .env.example
+└── package.json
+```
+
+## License
+
+MIT
