@@ -6,7 +6,7 @@ Otomasi flow sales marketing: scrape leads → CRM → WhatsApp broadcast → pi
 
 - **Frontend:** Next.js 16, TypeScript, Tailwind CSS v4, shadcn/ui
 - **Backend:** Next.js API Routes, Prisma 5, NextAuth v5
-- **Database:** SQLite (dev) / PostgreSQL (prod via Neon)
+- **Database:** PostgreSQL (Neon free tier — dipakai dev & prod)
 - **Messaging:** WhatsApp Business Cloud API (Meta)
 - **Scraping:** Playwright (Google Maps)
 - **Charts:** Recharts
@@ -101,8 +101,8 @@ vercel
 ## Environment Variables
 
 ```env
-DATABASE_URL=              # PostgreSQL connection string (opsional, default SQLite)
-NEXTAUTH_SECRET=            # Random string for JWT
+DATABASE_URL=              # PostgreSQL connection string (wajib — Neon)
+NEXTAUTH_SECRET=            # Random string for JWT (wajib)
 NEXTAUTH_URL=http://localhost:3000
 
 # WhatsApp Cloud API (optional)
