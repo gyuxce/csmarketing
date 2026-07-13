@@ -1,13 +1,13 @@
-// Prisma Schema — Sales Marketing Flow SaaS
-// Dev: SQLite | Prod: PostgreSQL
+// Prisma Schema — CS Assistant
+// Uses PostgreSQL for both dev (Neon) and prod (Vercel)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ─── AUTH & USERS ───────────────────────────────────────
@@ -16,7 +16,7 @@ model User {
   name          String?
   email         String    @unique
   passwordHash  String
-  role          String    @default("USER")  // ADMIN | USER
+  role          String    @default("USER")
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -69,11 +69,11 @@ model Lead {
   company       String?
   address       String?
   city          String?
-  source        String       @default("MANUAL")  // GOOGLE_MAPS|INSTAGRAM|LINKEDIN|MANUAL|CSV_IMPORT
+  source        String       @default("MANUAL")
   sourceUrl     String?
   sourceRaw     String?
   tags          String       @default("[]")
-  status        String       @default("NEW")  // NEW|CONTACTED|INTERESTED|NEGOTIATION|WON|LOST
+  status        String       @default("NEW")
   pipelineId    String?
   pipeline      Pipeline?    @relation(fields: [pipelineId], references: [id])
   assignedToId  String?
@@ -119,8 +119,8 @@ model Message {
   id           String      @id @default(cuid())
   leadId       String
   lead         Lead        @relation(fields: [leadId], references: [id])
-  direction    String      @default("OUTBOUND")  // OUTBOUND|INBOUND
-  status       String      @default("PENDING")   // PENDING|SENT|DELIVERED|READ|FAILED|RECEIVED
+  direction    String      @default("OUTBOUND")
+  status       String      @default("PENDING")
   waMessageId  String?
   content      String
   templateId   String?
@@ -145,7 +145,7 @@ model Broadcast {
   templateId     String?
   messageBody    String
   audience       BroadcastAudience[]
-  status         String              @default("DRAFT")  // DRAFT|SCHEDULED|SENDING|COMPLETED|FAILED
+  status         String              @default("DRAFT")
   scheduledAt    DateTime?
   sentCount      Int                 @default(0)
   deliveredCount Int                 @default(0)
@@ -171,10 +171,10 @@ model BroadcastAudience {
 // ─── SCRAPE JOBS ───────────────────────────────────────
 model ScrapeJob {
   id          String    @id @default(cuid())
-  source      String    @default("MANUAL")  // GOOGLE_MAPS|INSTAGRAM|LINKEDIN
+  source      String    @default("MANUAL")
   query       String
   location    String?
-  status      String    @default("PENDING")  // PENDING|RUNNING|COMPLETED|FAILED
+  status      String    @default("PENDING")
   resultCount Int       @default(0)
   error       String?
   userId      String
